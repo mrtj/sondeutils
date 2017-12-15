@@ -56,29 +56,51 @@ def save_to_json(hwid, data):
         json.dump(data, json_file, indent=4)
     print('Written {}'.format(filename))
 
-def save_to_kml(hwid, data):
-    kml = simplekml.Kml()
-    for entry in data:
-        try:
-            name = entry['ID']
-            coords = (entry['LON'], entry['LAT'], entry['ALT'])
-            author = entry['UPLOADER']
-            description = 'datetime: {}, speed: {}, vspeed: {}' \
-                .format(entry['DATETIME'], entry['SPEED'], entry['VSPEED'])
-        except KeyError as exception:
-            print('WARNING: expected key not found for entry.')
-            print(repr(exception))
-            continue
-        point = kml.newpoint(name=name)
+def configure_kml_point(point, entry):
+    try:
+        name = entry['ID']
+        coords = (entry['LON'], entry['LAT'], entry['ALT'])
+        author = entry['UPLOADER']
+        description = 'id: {ID}\nlatitude: {LAT},\nlongitude: {LON},\naltitude: {ALT},\n'\
+            'datetime: {DATETIME}\nspeed: {SPEED}\nvspeed: {VSPEED}\nuploader: {UPLOADER}'\
+            .format(**entry)
+        point.name = name
         point.coords = [coords]
         point.altitudemode = simplekml.AltitudeMode.absolute
         point.atomauthor = author
         point.description = description
+    except KeyError as exception:
+        print('WARNING: expected key not found for entry.')
+        print(repr(exception))
+
+def save_to_kml(hwid, data):
+    kml = simplekml.Kml()
+    chunk_length = 100
+    chunks = [data[i:i+chunk_length] for i in range(0, len(data), chunk_length)]
+    linestyle = simplekml.LineStyle(width=2.0, color=simplekml.Color.lightblue)
+    for chunk in chunks:
+        try:
+            point = kml.newpoint()
+            configure_kml_point(point, chunk[0])
+            line = kml.newlinestring()
+            line.coords = [(entry['LON'], entry['LAT'], entry['ALT']) for entry in chunk]
+            line.altitudemode = simplekml.AltitudeMode.absolute
+            line.atomauthor = chunk[0]['UPLOADER']
+            line.linestyle = linestyle
+        except KeyError as exception:
+            print('WARNING: expected key not found for entry.')
+            print(repr(exception))
+            continue
+    endpoint = kml.newpoint()
+    configure_kml_point(endpoint, data[-1])
     filename = hwid + '.kml'
     kml.save(filename)
     print('Written {}'.format(filename))
 
 def process_data(hwid, data):
+    if len(data) == 0:
+        print('No entries found.')
+        return
     save_to_json(hwid, data)
     save_to_csv(hwid, data)
     save_to_kml(hwid, data)
