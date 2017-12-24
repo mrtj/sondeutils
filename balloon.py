@@ -42,7 +42,7 @@ def save_to_csv(hwid, data):
     fieldnames = ['ID', 'DATETIME', 'HW', 'TYPE', 'LAT', 'LON', 'ALT',
                   'SPEED', 'VSPEED', 'FREQ', 'UPLOADER']
     filename = hwid + '.csv'
-    with open(filename, 'w', newline='') as csv_file:
+    with open(filename, 'w') as csv_file:
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames, delimiter=',',
                                 quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
